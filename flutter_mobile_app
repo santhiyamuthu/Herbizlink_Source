@@ -1,0 +1,63 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+void main() {
+  runApp(HerBizLinkApp());
+}
+
+class HerBizLinkApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final TextEditingController _categoryController = TextEditingController();
+  String recommendations = "";
+
+  Future<void> getRecommendations() async {
+    final response = await http.post(
+      Uri.parse("http://your-backend-url/recommendations"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"product_category": _categoryController.text}),
+    );
+    final data = jsonDecode(response.body);
+    setState(() {
+      recommendations = data["recommendations"];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("HerBizLink")),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _categoryController,
+              decoration: InputDecoration(labelText: "Enter Product Category"),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: getRecommendations,
+              child: Text("Get Recommendations"),
+            ),
+            SizedBox(height: 20),
+            Text(recommendations, style: TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
