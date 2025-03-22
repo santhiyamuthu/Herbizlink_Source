@@ -1,0 +1,59 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import firebase_admin
+from firebase_admin import credentials, firestore
+import openai
+import stripe
+
+# Initialize FastAPI app
+app = FastAPI()
+
+# Initialize Firebase
+cred = credentials.Certificate("path/to/your/firebase-credentials.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# OpenAI API Key (Replace with your API Key)
+openai.api_key = "your-openai-api-key"
+
+# Stripe Payment Integration (Replace with your API Key)
+stripe.api_key = "your-stripe-secret-key"
+
+# User Registration Model
+class User(BaseModel):
+    name: str
+    email: str
+    business_type: str
+
+# Register User API
+@app.post("/register")
+def register_user(user: User):
+    user_ref = db.collection('users').document(user.email)
+    user_ref.set(user.dict())
+    return {"message": "User registered successfully!"}
+
+# AI-Based Business Recommendations
+@app.post("/recommendations")
+def get_recommendations(product_category: str):
+    prompt = f"Suggest market opportunities for a business selling {product_category}."
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "system", "content": "You are a business consultant."},
+                  {"role": "user", "content": prompt}]
+    )
+    return {"recommendations": response['choices'][0]['message']['content']}
+
+# Process Payment
+@app.post("/process_payment")
+def process_payment(amount: float, currency: str = "INR"):
+    payment_intent = stripe.PaymentIntent.create(
+        amount=int(amount * 100),
+        currency=currency,
+        payment_method_types=["card"]
+    )
+    return {"client_secret": payment_intent.client_secret}
+
+# Run FastAPI Server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
